@@ -459,6 +459,179 @@
                 }
             }
         },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "Sanctum Auth"
+                ],
+                "summary": "Register a new user account",
+                "description": "Register users",
+                "operationId": "d08b5c692de02cb04253d500d4c0c526",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Chris Rowles"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "me@rowles.ch"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User registered — returns a Sanctum bearer token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthToken"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Sanctum Auth"
+                ],
+                "summary": "Log in with email and password",
+                "description": "Login users",
+                "operationId": "2b9658cb21d66f7e8e66c4878d752e4f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "me@rowles.ch"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Authenticated — returns a Sanctum bearer token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthToken"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "Sanctum Auth"
+                ],
+                "summary": "Revoke all tokens for the authenticated user",
+                "description": "Logout users",
+                "operationId": "c9dd891e0254bdf7e2f28640cee04b02",
+                "responses": {
+                    "200": {
+                        "description": "Logged out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Logged out"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "Sanctum Auth"
+                ],
+                "summary": "Get the authenticated user with commander details",
+                "description": "Fetch authenticated user",
+                "operationId": "16aff1f8cfe3395fba55a0ba8418ecc5",
+                "responses": {
+                    "200": {
+                        "description": "Authenticated user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/stations/{slug}": {
             "get": {
                 "tags": [
@@ -1919,6 +2092,10 @@
         }
     },
     "tags": [
+        {
+            "name": "Sanctum Auth",
+            "description": "Sanctum authentication"
+        },
         {
             "name": "Frontier Auth",
             "description": "Frontier SSO OAuth 2.0 PKCE authentication"

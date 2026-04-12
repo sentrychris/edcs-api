@@ -11,6 +11,7 @@ use OpenApi\Attributes as OA;
     contact: new OA\Contact(name: 'EDCS', url: 'https://edcs.app')
 )]
 #[OA\Server(url: L5_SWAGGER_CONST_HOST, description: 'EDCS API Server')]
+#[OA\Tag(name: 'Sanctum Auth', description: 'Sanctum authentication')]
 #[OA\Tag(name: 'Frontier Auth', description: 'Frontier SSO OAuth 2.0 PKCE authentication')]
 #[OA\Tag(name: 'Frontier CAPI', description: 'Frontier Companion API — authenticated commander data')]
 #[OA\Tag(name: 'GalNet', description: 'In-game GalNet news articles')]

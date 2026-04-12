@@ -5,6 +5,7 @@ use App\Http\Controllers\FrontierAuthController;
 use App\Http\Controllers\FrontierCApiController;
 use App\Http\Controllers\GalnetNewsController;
 use App\Http\Controllers\MarketController;
+use App\Http\Controllers\SanctumAuthController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\SystemBodyController;
@@ -28,14 +29,20 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 Route::prefix('auth')->group(function () {
+    Route::get('login', fn () => redirect('https://edcs.app'))->name('login');
+
+    // Sanctum Auth
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('me', [SanctumAuthController::class, 'me']);
+        Route::post('logout', [SanctumAuthController::class, 'logout']);
+    });
+
     // Frontier Auth
     Route::prefix('frontier')->group(function () {
         Route::get('login', [FrontierAuthController::class, 'login'])->name('frontier.auth.login');
         Route::get('callback', [FrontierAuthController::class, 'callback'])->name('frontier.auth.callback');
         Route::post('me', [FrontierAuthController::class, 'me'])->name('frontier.auth.me');
     });
-    // Redirect named route
-    Route::get('login', fn () => redirect('https://edcs.app'))->name('login');
 });
 
 Route::middleware(['auth:sanctum', 'has.cmdr'])->group(function () {
