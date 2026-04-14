@@ -63,34 +63,27 @@ class EddnSystemService extends EddnService
             $starSystemId64 = $message['SystemAddress'];
             $existingSystem = $existingSystems[$starSystemId64] ?? null;
 
-            if (! $existingSystem) {
-                try {
-                    $system = System::create([
-                        'id64' => $starSystemId64,
+            try {
+                $system = $existingSystem ?? System::updateOrCreate(
+                    ['id64' => $starSystemId64],
+                    [
                         'name' => $starSystem,
                         'coords_x' => $message['StarPos'][0],
                         'coords_y' => $message['StarPos'][1],
                         'coords_z' => $message['StarPos'][2],
                         'updated_at' => now(),
-                    ]);
+                    ],
+                );
 
-                    if (! $system && ! in_array($starSystemId64, Redis::smembers('eddn_systems_not_inserted'))) {
-                        Redis::sadd('eddn_systems_not_inserted', $starSystemId64);
-                    } else {
-                        $this->updateSystemInformation($system, $message);
-                    }
-                } catch (Exception $e) {
-                    if (! in_array($starSystem, config('imports.errors.systems.exclusions'))) {
-                        $errorMessage = "Failed to insert SYSTEM {$starSystem} ({$starSystemId64})";
-                        Log::channel('eddn')->error($errorMessage, ['error' => $e->getMessage()]);
-                        DiscordAlert::eddn(self::class, $errorMessage.': '.$e->getMessage(), false);
-                    }
-
-                    continue;
-                }
-            } else {
-                $system = $existingSystem;
                 $this->updateSystemInformation($system, $message);
+            } catch (Exception $e) {
+                if (! in_array($starSystem, config('imports.errors.systems.exclusions'))) {
+                    $errorMessage = "Failed to insert SYSTEM {$starSystem} ({$starSystemId64})";
+                    Log::channel('eddn')->error($errorMessage, ['error' => $e->getMessage()]);
+                    DiscordAlert::eddn(self::class, $errorMessage.': '.$e->getMessage(), false);
+                }
+
+                continue;
             }
 
             Cache::set('latest_system', $system);
