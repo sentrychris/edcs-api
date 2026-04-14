@@ -3,18 +3,20 @@
 namespace App\Services;
 
 use App\Facades\DiscordAlert;
+use App\Models\System;
+use App\Models\SystemBody;
 use DateTime;
 use Exception;
-use App\Models\System;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Str;
 
 class EdsmApiService extends ApiService
 {
     /**
      * Search EDSM for system data by system name and update records if found.
-     * 
-     * @param string $name - the system name
+     *
+     * @param  string  $name  - the system name
      * @return mixed the created system record or false
      */
     public function updateSystem(string $name): System|bool
@@ -28,7 +30,7 @@ class EdsmApiService extends ApiService
         } else {
             $systemName = $name;
         }
-    
+
         try {
             // Set the API config and make the request
             $response = $this->setConfig(config('elite.edsm'))
@@ -37,7 +39,7 @@ class EdsmApiService extends ApiService
                     'systemName' => $systemName,
                     'showCoordinates' => true,
                     'showInformation' => true,
-                    'showId' => true
+                    'showId' => true,
                 ]);
 
             $this->setApiRequestCounter();
@@ -50,15 +52,15 @@ class EdsmApiService extends ApiService
                     'coords_x' => $response->coords->x,
                     'coords_y' => $response->coords->y,
                     'coords_z' => $response->coords->z,
-                    'updated_at' => now()
+                    'updated_at' => now(),
                 ]);
             } else {
-                $message = 'Error updating system: No response from EDSM API for ' . $systemName;
+                $message = 'Error updating system: No response from EDSM API for '.$systemName;
                 Log::channel('import:system')->error($message);
                 DiscordAlert::edsm(self::class, $message, false);
             }
         } catch (Exception $e) {
-            $message = 'Error updating system: ' . $systemName . ': ' . $e->getMessage();
+            $message = 'Error updating system: '.$systemName.': '.$e->getMessage();
             Log::channel('import:system')->error($message);
             DiscordAlert::edsm(self::class, $message, false);
         }
@@ -68,15 +70,15 @@ class EdsmApiService extends ApiService
 
     /**
      * Search EDSM for system bodies data by system name and update records if found.
-     * 
-     * @param System $system - the system we are searching bodies for
+     *
+     * @param  System  $system  - the system we are searching bodies for
      */
     public function updateSystemBodies(System $system): void
     {
         $response = $this->setConfig(config('elite.edsm'))
             ->setCategory('system')
             ->get(key: 'bodies', params: [
-                'systemName' => $system->name
+                'systemName' => $system->name,
             ]);
 
         $this->setApiRequestCounter();
@@ -96,144 +98,83 @@ class EdsmApiService extends ApiService
             $system->save();
 
             if ($bodies) {
-                foreach($bodies as $body) {
+                $records = [];
+
+                foreach ($bodies as $body) {
                     try {
                         $id = random_int(100000000, 999999999);
                         $bodyId = $id;
 
-                        if (property_isset($body,'id64')) {
+                        if (property_isset($body, 'id64')) {
                             $id = $body->id64;
                             $bodyId = $body->bodyId;
                         }
-                        
-                        $system->bodies()->updateOrCreate(['id64' => $id], [
+
+                        $records[] = [
                             'id64' => $id,
                             'body_id' => $bodyId,
+                            'system_id' => $system->id,
                             'name' => $body->name,
                             'type' => $body->type,
                             'sub_type' => $body->subType,
+                            'slug' => Str::slug($id.' '.$body->name),
+                            'discovered_by' => property_isset($body, 'discovery') ? $body->discovery->commander : null,
+                            'discovered_at' => property_isset($body, 'discovery') ? $body->discovery->date : null,
+                            'distance_to_arrival' => property_isset($body, 'distanceToArrival') ? $body->distanceToArrival : null,
+                            'is_main_star' => property_isset($body, 'isMainStar') ? $body->isMainStar : false,
+                            'is_scoopable' => property_isset($body, 'isScoopable') ? $body->isScoopable : false,
+                            'spectral_class' => property_isset($body, 'spectralClass') ? $body->spectralClass : null,
+                            'luminosity' => property_isset($body, 'luminosity') ? $body->luminosity : null,
+                            'solar_masses' => property_isset($body, 'solarMasses') ? $body->solarMasses : null,
+                            'solar_radius' => property_isset($body, 'solarRadius') ? $body->solarRadius : null,
+                            'absolute_magnitude' => property_isset($body, 'absoluteMagnitude') ? $body->absoluteMagnitude : null,
+                            'surface_temp' => property_isset($body, 'surfaceTemperature') ? $body->surfaceTemperature : null,
+                            'radius' => property_isset($body, 'radius') ? $body->radius : null,
+                            'gravity' => property_isset($body, 'gravity') ? $body->gravity : null,
+                            'earth_masses' => property_isset($body, 'earthMasses') ? $body->earthMasses : null,
+                            'atmosphere_type' => property_isset($body, 'atmosphereType') ? $body->atmosphereType : null,
+                            'volcanism_type' => property_isset($body, 'volcanismType') ? $body->volcanismType : null,
+                            'terraforming_state' => property_isset($body, 'terraformingState') ? $body->terraformingState : null,
+                            'is_landable' => property_isset($body, 'isLandable') ? $body->isLandable : false,
+                            'orbital_period' => property_isset($body, 'orbitalPeriod') ? $body->orbitalPeriod : null,
+                            'orbital_eccentricity' => property_isset($body, 'orbitalEccentricity') ? $body->orbitalEccentricity : null,
+                            'orbital_inclination' => property_isset($body, 'orbitalInclination') ? $body->orbitalInclination : null,
+                            'arg_of_periapsis' => property_isset($body, 'argOfPeriapsis') ? $body->argOfPeriapsis : null,
+                            'rotational_period' => property_isset($body, 'rotationalPeriod') ? $body->rotationalPeriod : null,
+                            'is_tidally_locked' => property_isset($body, 'rotationalPeriodTidallyLocked') ? $body->rotationalPeriodTidallyLocked : false,
+                            'semi_major_axis' => property_isset($body, 'semiMajorAxis') ? $body->semiMajorAxis : null,
+                            'axial_tilt' => property_isset($body, 'axialTilt') ? $body->axialTilt : null,
+                            'rings' => property_isset($body, 'rings') ? json_encode($body->rings) : null,
+                            'parents' => property_isset($body, 'parents') ? json_encode($body->parents) : null,
+                        ];
+                    } catch (Exception $e) {
+                        $message = 'Error updating system bodies: '.$system->name.': '.$e->getMessage();
+                        Log::channel('import:system')->error($message);
+                        DiscordAlert::edsm(self::class, $message, false);
+                    }
+                }
 
-                            'discovered_by' => property_isset($body, 'discovery')
-                                ? $body->discovery->commander
-                                : null,
-
-                            'discovered_at' => property_isset($body, 'discovery')
-                                ? $body->discovery->date
-                                : null,
-
-                            'distance_to_arrival' => property_isset($body, 'distanceToArrival')
-                                ? $body->distanceToArrival
-                                : null,
-
-                            'is_main_star' => property_isset($body, 'isMainStar')
-                                ? $body->isMainStar
-                                : false,
-
-                            'is_scoopable' => property_isset($body, 'isScoopable')
-                                ? $body->isScoopable
-                                : false,
-
-                            'spectral_class' => property_isset($body, 'spectralClass')
-                                ? $body->spectralClass
-                                : null,
-
-                            'luminosity' => property_isset($body, 'luminosity')
-                                ? $body->luminosity
-                                : null,
-
-                            'solar_masses' => property_isset($body, 'solarMasses')
-                                ? $body->solarMasses
-                                : null,
-
-                            'solar_radius' => property_isset($body, 'solarRadius')
-                                ? $body->solarRadius
-                                : null,
-
-                            'absolute_magnitude' => property_isset($body, 'absoluteMagnitude')
-                                ? $body->absoluteMagnitude
-                                : null,
-
-                            'surface_temp' => property_isset($body, 'surfaceTemperature')
-                                ? $body->surfaceTemperature
-                                : null,
-
-                            'radius' => property_isset($body, 'radius')
-                                ? $body->radius
-                                : null,
-
-                            'gravity' => property_isset($body, 'gravity')
-                                ? $body->gravity
-                                : null,
-
-                            'earth_masses' => property_isset($body, 'earthMasses')
-                                ? $body->earthMasses
-                                : null,
-
-                            'atmosphere_type' => property_isset($body, 'atmosphereType')
-                                ? $body->atmosphereType
-                                : null,
-
-                            'volcanism_type' => property_isset($body, 'volcanismType')
-                                ? $body->volcanismType
-                                : null,
-
-                            'terraforming_state' => property_isset($body, 'terraformingState')
-                                ? $body->terraformingState
-                                : null,
-
-                            'is_landable' => property_isset($body, 'isLandable')
-                                ? $body->isLandable
-                                : false,
-
-                            'orbital_period' => property_isset($body, 'orbitalPeriod')
-                                ? $body->orbitalPeriod
-                                : null,
-
-                            'orbital_eccentricity' => property_isset($body, 'orbitalEccentricity')
-                                ? $body->orbitalEccentricity
-                                : null,
-
-                            'orbital_inclination' => property_isset($body, 'orbitalInclination')
-                                ? $body->orbitalInclination
-                                : null,
-
-                            'arg_of_periapsis' => property_isset($body, 'argOfPeriapsis')
-                                ? $body->argOfPeriapsis
-                                : null,
-
-                            'rotational_period' => property_isset($body, 'rotationalPeriod')
-                                ? $body->rotationalPeriod
-                                : null,
-
-                            'is_tidally_locked' => property_isset($body, 'rotationalPeriodTidallyLocked')
-                                ? $body->rotationalPeriodTidallyLocked
-                                : false,
-
-                            'semi_major_axis' => property_isset($body, 'semiMajorAxis')
-                                ? $body->semiMajorAxis
-                                : null,
-
-                            'axial_tilt' => property_isset($body, 'axialTilt')
-                                ? $body->axialTilt
-                                : null,
-
-                            'rings' => property_isset($body, 'rings')
-                                ? json_encode($body->rings)
-                                : null,
-                            
-                            'parents' => property_isset($body, 'parents')
-                                ? json_encode($body->parents)
-                                : null,
+                if (! empty($records)) {
+                    try {
+                        SystemBody::upsert($records, ['id64'], [
+                            'body_id', 'name', 'type', 'sub_type', 'discovered_by', 'discovered_at',
+                            'distance_to_arrival', 'is_main_star', 'is_scoopable', 'spectral_class',
+                            'luminosity', 'solar_masses', 'solar_radius', 'absolute_magnitude',
+                            'surface_temp', 'radius', 'gravity', 'earth_masses', 'atmosphere_type',
+                            'volcanism_type', 'terraforming_state', 'is_landable', 'orbital_period',
+                            'orbital_eccentricity', 'orbital_inclination', 'arg_of_periapsis',
+                            'rotational_period', 'is_tidally_locked', 'semi_major_axis', 'axial_tilt',
+                            'rings', 'parents',
                         ]);
                     } catch (Exception $e) {
-                        $message = 'Error updating system bodies: ' . $system->name . ': ' . $e->getMessage();
+                        $message = 'Error upserting system bodies: '.$system->name.': '.$e->getMessage();
                         Log::channel('import:system')->error($message);
                         DiscordAlert::edsm(self::class, $message, false);
                     }
                 }
             }
         } else {
-            $message = 'Error updating system bodies: No response from EDSM API for ' . $system->name;
+            $message = 'Error updating system bodies: No response from EDSM API for '.$system->name;
             Log::channel('import:system')->error($message);
             DiscordAlert::edsm(self::class, $message, false);
         }
@@ -241,9 +182,8 @@ class EdsmApiService extends ApiService
 
     /**
      * Search EDSM for system information data by system name and update records if found.
-     * 
-     * @param System $system - the system we are searching information for
-     * @return void
+     *
+     * @param  System  $system  - the system we are searching information for
      */
     public function updateSystemInformation(System $system): void
     {
@@ -251,9 +191,9 @@ class EdsmApiService extends ApiService
             ->setCategory('systems')
             ->get(key: 'system', params: [
                 'systemName' => $system->name,
-                'showInformation' => true
+                'showInformation' => true,
             ]);
-        
+
         $this->setApiRequestCounter();
 
         if ($response && property_isset($response, 'information')) {
@@ -290,12 +230,12 @@ class EdsmApiService extends ApiService
                         : null,
                 ]);
             } catch (Exception $e) {
-                $message = 'Error updating system information: ' . $system->name . ': ' . $e->getMessage();
+                $message = 'Error updating system information: '.$system->name.': '.$e->getMessage();
                 Log::channel('import:system')->error($message);
                 DiscordAlert::edsm(self::class, $message, false);
             }
         } else {
-            $message = 'Error updating system information: No response from EDSM API for ' . $system->name;
+            $message = 'Error updating system information: No response from EDSM API for '.$system->name;
             Log::channel('import:system')->error($message);
             DiscordAlert::edsm(self::class, $message, false);
         }
@@ -303,19 +243,18 @@ class EdsmApiService extends ApiService
 
     /**
      * Search EDSM for system stations data by system name and update records if found.
-     * 
-     * @param System $system - the system we are searching stations for
-     * @return void
+     *
+     * @param  System  $system  - the system we are searching stations for
      */
     public function updateSystemStations(System $system): void
     {
         $response = $this->setConfig(config('elite.edsm'))
             ->setCategory('system')
-            ->get(key: 'stations', subkey: 'stations', params:[
+            ->get(key: 'stations', subkey: 'stations', params: [
                 'systemName' => $system->name,
-                'showId' => true
+                'showId' => true,
             ]);
-        
+
         $this->setApiRequestCounter();
 
         if ($response && property_isset($response, 'stations')) {
@@ -370,7 +309,7 @@ class EdsmApiService extends ApiService
                                 : null,
 
                             'has_shipyard' => property_isset($station, 'haveShipyard')
-                                ?  $station->haveShipyard
+                                ? $station->haveShipyard
                                 : null,
 
                             'has_outfitting' => property_isset($station, 'haveOutfitting')
@@ -403,23 +342,24 @@ class EdsmApiService extends ApiService
                         ]
                     );
                 } catch (Exception $e) {
-                    $message = 'Error updating system stations: ' . $system->name . ': ' . $e->getMessage();
+                    $message = 'Error updating system stations: '.$system->name.': '.$e->getMessage();
                     Log::channel('import:system')->error($message);
                     DiscordAlert::edsm(self::class, $message, false);
                 }
             }
         } else {
-            $message = 'Error updating system stations: No response from EDSM API for ' . $system->name;
+            $message = 'Error updating system stations: No response from EDSM API for '.$system->name;
             Log::channel('import:system')->error($message);
             DiscordAlert::edsm(self::class, $message, false);
         }
     }
 
-    private function date($date, $format = 'Y-m-d H:i:s', $minYear = 2013, $maxYear = 2026) {
+    private function date($date, $format = 'Y-m-d H:i:s', $minYear = 2013, $maxYear = 2026)
+    {
         $d = DateTime::createFromFormat($format, $date);
 
         if ($d && $d->format($format) === $date) {
-            $year = (int)$d->format('Y');
+            $year = (int) $d->format('Y');
             if ($year >= $minYear && $year <= $maxYear) {
                 return $date;
             }
@@ -430,8 +370,6 @@ class EdsmApiService extends ApiService
 
     /**
      * Get the API request counter for EDSM.
-     * 
-     * @return int
      */
     public function getApiRequestCounter(): int
     {
@@ -440,8 +378,6 @@ class EdsmApiService extends ApiService
 
     /**
      * Set the API request counter for EDSM.
-     * 
-     * @return void
      */
     private function setApiRequestCounter(): void
     {

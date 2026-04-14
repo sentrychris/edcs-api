@@ -16,22 +16,25 @@ class StatService
         }
 
         $ttl = array_key_exists('ttl', $options)
-            ? (int)$options['ttl']
+            ? (int) $options['ttl']
             : 3600;
 
-        return Cache::remember($key, $ttl, function ()
-        {            
-            $data = [
+        return Cache::remember($key, $ttl, function () {
+            $bodyCounts = SystemBody::toBase()
+                ->selectRaw('count(*) as bodies')
+                ->selectRaw("count(case when type = 'Star' then 1 end) as stars")
+                ->selectRaw("count(case when type = 'Planet' then 1 end) as orbiting")
+                ->first();
+
+            return [
                 'cartographical' => [
-                    'systems'  => System::count(),
-                    'bodies'   => SystemBody::count(),
-                    'stars'    => SystemBody::whereType('Star')->count(),
-                    'orbiting' => SystemBody::whereType('planet')->count()
+                    'systems' => System::count(),
+                    'bodies' => (int) $bodyCounts->bodies,
+                    'stars' => (int) $bodyCounts->stars,
+                    'orbiting' => (int) $bodyCounts->orbiting,
                 ],
-                'commanders' => Commander::count()
+                'commanders' => Commander::count(),
             ];
-                    
-            return $data;
         });
     }
 }

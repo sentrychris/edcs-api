@@ -100,21 +100,11 @@ class SystemController extends Controller
                 ->simplePaginate($limit)
                 ->appends($request->all());
         } else {
-            // Otherwise attempt to retrieve the current page from the cache
-            $systems = Cache::get("systems_page_{$page}");
-
-            // If the page does not exist in the cache, then retrieve it from the database
-            if (! $systems) {
-                Log::channel('pages:cache')
-                    ->info("systems_page_{$page} cache MISS - refreshing cache for this page");
-
-                $systems = System::filter($validated, 0)
-                    ->simplePaginate($limit)
-                    ->appends($request->all());
-
-                // Cache the page for 1 hour
-                Cache::set("systems_page_{$page}", $systems, 3600);
-            }
+            // Retrieve from cache or query the database
+            $systems = Cache::remember("systems_page_{$page}", 3600, fn () => System::filter($validated, 0)
+                ->simplePaginate($limit)
+                ->appends($request->all())
+            );
         }
 
         // Load the query relations for the collection e.g withInformation, withBodies, etc.
@@ -161,8 +151,19 @@ class SystemController extends Controller
     )]
     public function show(string $slug, SearchSystemRequest $request): SystemResource|Response
     {
+        // Get the request parameters
+        $validated = $request->validated();
+
+        // Build a cache key that includes the requested relations
+        $relations = collect($this->getQueryRelations())
+            ->keys()
+            ->filter(fn ($query) => array_key_exists($query, $validated) && (int) $validated[$query] === 1)
+            ->sort()
+            ->implode('_');
+        $cacheKey = "system_detail_{$slug}".($relations ? "_{$relations}" : '');
+
         // Attempt to retrieve the system from the cache
-        $system = Cache::get("system_detail_{$slug}");
+        $system = Cache::get($cacheKey);
 
         // If it exists in the cache, then return it
         if ($system) {
@@ -171,7 +172,7 @@ class SystemController extends Controller
 
         // Otherwise it's a cache MISS
         Log::channel('pages:cache')
-            ->info("system_detail_{$slug} cache MISS - refreshing cache for this page");
+            ->info("{$cacheKey} cache MISS - refreshing cache for this page");
 
         // Attempt to retrieve the system from our database
         $system = System::whereSlug($slug)->first();
@@ -186,9 +187,6 @@ class SystemController extends Controller
         if (! $system) {
             return response([], 404);
         }
-
-        // Get the request parameters
-        $validated = $request->validated();
 
         // Update the system with the requested relations e.g. withBodies, withInformation, etc.
         foreach ($this->getQueryRelations() as $query => $relation) {
@@ -214,7 +212,7 @@ class SystemController extends Controller
         }
 
         // Cache the system details for 1 hour
-        Cache::set("system_detail_{$slug}", $system, 3600);
+        Cache::set($cacheKey, $system, 3600);
 
         // Return the system resource
         return new SystemResource($system);
@@ -244,11 +242,7 @@ class SystemController extends Controller
     )]
     public function getLastUpdated()
     {
-        $system = Cache::get('latest_system');
-        if (! $system) {
-            $system = System::latest('updated_at')->first();
-            Cache::set('latest_system', $system);
-        }
+        $system = Cache::remember('latest_system', 3600, fn () => System::latest('updated_at')->first());
 
         if ($system->body_count === null && ! $system->bodies()->exists()) {
             $this->edsmApiService->updateSystemBodies($system);
@@ -451,38 +445,28 @@ class SystemController extends Controller
     public function searchByInformation(SearchSystemByInformationRequest $request)
     {
         $validated = $request->validated();
-        $relation = 'information';
+        $infoFilters = array_intersect_key($validated, array_flip(['population', 'allegiance', 'government', 'economy', 'security']));
 
         $systems = System::query()
-            ->when($request->has('population'),
-                fn ($query) => $query->whereHas($relation,
-                    fn ($query) => $query->where('population', '>=', $validated['population'])
-                )
-            )
-
-            ->when($request->has('allegiance'),
-                fn ($query) => $query->whereHas($relation,
-                    fn ($query) => $query->where('allegiance', 'LIKE', $validated['allegiance'].'%')
-                )
-            )
-
-            ->when($request->has('government'),
-                fn ($query) => $query->whereHas($relation,
-                    fn ($query) => $query->where('government', 'LIKE', $validated['government'].'%')
-                )
-            )
-
-            ->when(
-                $request->has('economy'),
-                fn ($query) => $query->whereHas($relation,
-                    fn ($query) => $query->where('economy', 'LIKE', $validated['economy'].'%')
-                )
-            )
-
-            ->when($request->has('security'),
-                fn ($query) => $query->whereHas($relation,
-                    fn ($query) => $query->where('security', 'LIKE', $validated['security'].'%')
-                )
+            ->when(! empty($infoFilters), fn ($query) => $query
+                ->whereHas('information', function ($q) use ($infoFilters) {
+                    $q
+                        ->when(isset($infoFilters['population']),
+                            fn ($q) => $q->where('population', '>=', $infoFilters['population'])
+                        )
+                        ->when(isset($infoFilters['allegiance']),
+                            fn ($q) => $q->where('allegiance', 'LIKE', $infoFilters['allegiance'].'%')
+                        )
+                        ->when(isset($infoFilters['government']),
+                            fn ($q) => $q->where('government', 'LIKE', $infoFilters['government'].'%')
+                        )
+                        ->when(isset($infoFilters['economy']),
+                            fn ($q) => $q->where('economy', 'LIKE', $infoFilters['economy'].'%')
+                        )
+                        ->when(isset($infoFilters['security']),
+                            fn ($q) => $q->where('security', 'LIKE', $infoFilters['security'].'%')
+                        );
+                })
             )
             ->simplePaginate();
 

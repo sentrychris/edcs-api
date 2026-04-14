@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\DiscordAlertService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -12,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(DiscordAlertService::class, fn() => new DiscordAlertService());
+        $this->app->singleton(DiscordAlertService::class, fn () => new DiscordAlertService);
     }
 
     /**
@@ -20,6 +21,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Model::preventLazyLoading(! app()->isProduction());
     }
 }
