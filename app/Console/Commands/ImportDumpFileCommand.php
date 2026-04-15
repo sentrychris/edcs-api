@@ -15,10 +15,7 @@ class ImportDumpFileCommand extends Command
      */
     protected $signature = 'import:dumpfile
         {--type= : The type of dump file to import.}
-        {--channel= : The log channel for the dispatch job.};
-        {--file= : The dump file, located at `/storage/dumps`.}
-        {--queue=default : The queue to dispatch the job to.}
-        {--validate : Validate the JSON file before processing.}';
+        {--file= : The dump file, located at `/storage/dumps`.}';
 
     /**
      * The console command description.
@@ -57,6 +54,7 @@ class ImportDumpFileCommand extends Command
         }
 
         $this->line("Configuring import job for {$filename}");
+        $type = $this->option('type'); // e.g. systems
 
         // Get the file size and set the threshold for type of processing
         $threshold = 1073741824; // 1GB
@@ -65,8 +63,11 @@ class ImportDumpFileCommand extends Command
         if (filesize($filepath) > $threshold) {
             $this->warn("{$filename} is larger than ".bytes_format($threshold));
             $this->line('The file will need to be split into parts for parallel processing.');
-
-            $parts = 16;
+            $parts = (int) $this->ask('How many parts should the file be split into?', 16);
+            if ($parts < 2) {
+                $this->error('Split parts must be at least 2.');
+                return;
+            }
             $this->jsonLargeFileSplitService->split($filename, $filepath, $parts);
             $this->info("Successfully split {$filename} into {$parts} parts.");
 
@@ -74,30 +75,30 @@ class ImportDumpFileCommand extends Command
                 $this->info("Dispatching part {$part} import job for processing...");
 
                 $filename = pathinfo($this->option('file'), PATHINFO_FILENAME)."_part_{$part}.json";
-                $this->dispatchJob($filename);
+                $this->dispatchJob($type, $filename);
             }
 
             $this->warn('Please ensure you have enough queue workers for parallel processing.');
         } else {
-            $this->line("{$filename} is smaller than split threshold (".bytes_format($threshold).')');
-            $this->dispatchJob($filename);
+            $this->dispatchJob($type, $filename);
         }
     }
 
     /**
      * Dispatch a job to process the file.
      *
+     * @param string $type
+     * @param string $filename
      * @return void
      */
-    private function dispatchJob(string $filename)
+    private function dispatchJob(string $type, string $filename)
     {
-        if (in_array($this->option('type'), ['sys', 'system', 'systems'])) {
-            ImportSystemsDumpFileJob::dispatch($this->option('channel'), $filename)
-                ->onQueue($this->option('queue'));
-
-            $this->info('Import job has been dispatched.');
+        if ($type === 'systems') {
+            ImportSystemsDumpFileJob::dispatch('import:system', $filename)
+                ->onQueue('default');
+            $this->info('Systems import job has been dispatched.');
         } else {
-            $this->error('Type does not match a valid dumpfile processing job type.');
+            $this->error('Type does not match a valid job type.');
         }
     }
 }

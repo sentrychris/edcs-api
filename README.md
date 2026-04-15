@@ -103,7 +103,6 @@ The ED:CS backend is built with [Laravel](https://laravel.com/) and uses [MySQL]
         ```sh
         ./vendor/bin/sail artisan import:dumpfile \
             --type systems \
-            --channel import:system \
             --file systemsPopulated.json
         ```
     
