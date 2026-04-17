@@ -18,7 +18,6 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use OpenApi\Attributes as OA;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SystemController extends Controller
 {
@@ -476,62 +475,5 @@ class SystemController extends Controller
         );
 
         return SystemResource::collection($systems);
-    }
-
-    /**
-     * Return a full list of system ID64s as a streamed JSON response.
-     *
-     * Streams the response in batches to avoid loading all systems into memory at once.
-     */
-    #[OA\Get(
-        path: '/systems/id64s',
-        summary: 'Stream the full id64 list for all systems',
-        description: 'Returns a streaming JSON array of every system id64. Delivered in chunks to avoid memory limits. Intended for consumers that need the full system index.',
-        tags: ['Systems'],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Streamed JSON array: [id64, ...]',
-                content: new OA\JsonContent(
-                    type: 'array',
-                    items: new OA\Items(type: 'integer'),
-                    example: [10477373803, 8216113749]
-                )
-            ),
-        ]
-    )]
-    public function getId64s(): StreamedResponse
-    {
-        return response()->stream(function () {
-            $buffer = '[';
-            $count = 0;
-
-            System::select(['id64'])->cursor()->each(function ($system) use (&$buffer, &$count) {
-                if ($count > 0) {
-                    $buffer .= ',';
-                }
-                $buffer .= json_encode($system->id64);
-                $count++;
-
-                if ($count % 500 === 0) {
-                    echo $buffer;
-                    $buffer = '';
-                    if (ob_get_level() > 0) {
-                        ob_flush();
-                    }
-                    flush();
-                }
-            });
-
-            echo $buffer.']';
-
-            if (ob_get_level() > 0) {
-                ob_flush();
-            }
-            flush();
-        }, 200, [
-            'Content-Type' => 'application/json',
-            'X-Accel-Buffering' => 'no',
-        ]);
     }
 }

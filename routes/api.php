@@ -3,6 +3,7 @@
 use App\Http\Controllers\CommanderController;
 use App\Http\Controllers\FrontierAuthController;
 use App\Http\Controllers\FrontierCApiController;
+use App\Http\Controllers\GalaxyController;
 use App\Http\Controllers\GalnetNewsController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\SanctumAuthController;
@@ -72,9 +73,16 @@ Route::prefix('systems')->name('systems.')->group(function () {
         Route::get('information', [SystemController::class, 'searchByInformation']);
         Route::get('route', [SystemController::class, 'searchRoute']);
     });
-    Route::get('id64s', [SystemController::class, 'getId64s']);
 });
 Route::resource('systems', SystemController::class);
+
+/*
+|--------------------------------------------------------------------------
+| /galaxy routes
+|--------------------------------------------------------------------------
+*/
+Route::get('galaxy/manifest', [GalaxyController::class, 'manifest']);
+Route::get('galaxy/tiles/{path}', [GalaxyController::class, 'tile'])->where('path', '.*');
 
 /*
 |--------------------------------------------------------------------------
