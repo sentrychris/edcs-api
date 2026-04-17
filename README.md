@@ -2,7 +2,10 @@
 
 ED:CS API. View documentation here: https://api.edcs.app/api/documentation
 
-## Requirements
+## Dev Requirements
+- Docker
+
+## Server Requirements
 
 - Nginx or Apache:
     - (If using Nginx): php-fpm
@@ -26,12 +29,6 @@ ED:CS API. View documentation here: https://api.edcs.app/api/documentation
 - MySQL
 - Redis
 - Supervisor
-
-## Development
-
-The ED:CS backend is built with [Laravel](https://laravel.com/) and uses [MySQL](https://mysql.org/) for storage, [Redis](https://redis.io/) for caching, and [Supervisor](http://supervisord.org/) for managing queue workers and long-running artisan commands.
-
-[Docker](https://www.docker.com/) is used for local development.
 
 ### Quick Start
 
@@ -101,9 +98,7 @@ The ED:CS backend is built with [Laravel](https://laravel.com/) and uses [MySQL]
     2. Extract it to `storage/dumps/`
     3. Run the import command:
         ```sh
-        ./vendor/bin/sail artisan import:dumpfile \
-            --type systems \
-            --file systemsPopulated.json
+        ./vendor/bin/sail artisan import:dumpfile --type systems --file systemsPopulated.json
         ```
     
     Please note, the `systemsPopulated.json` file is larger than 1GB. The `import:dumpfile` command will therefore split the file into parts and dispatch them as jobs to the worker queue.
