@@ -1,5 +1,7 @@
 # ED:CS API
 
+[OpenAPI Documentation](https://api.edcs.app/api/documentation)
+
 ED:CS is a backend API for the game *Elite: Dangerous*, providing a unified read interface over a large catalogue of star systems, celestial bodies, stations, market data, and Galnet news. Data is sourced from community projects.
 
 Endpoints support spatial queries (nearest-system search and A*-based route plotting between systems), filtered system/body/station lookups, and cached statistics.
