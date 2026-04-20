@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Facades\DiscordAlert;
+use App\Models\FleetCarrier;
 use App\Models\System;
 use App\Models\SystemBody;
 use DateTime;
@@ -259,6 +260,7 @@ class EdsmApiService extends ApiService
 
         if ($response && property_isset($response, 'stations')) {
             $stations = $response->stations;
+            $seenCarrierMarketIds = [];
 
             foreach ($stations as $station) {
                 try {
@@ -267,10 +269,15 @@ class EdsmApiService extends ApiService
                     }
 
                     if ($station->type === 'Fleet Carrier') {
+                        $carrier = $this->upsertFleetCarrier($system, $station);
+                        if ($carrier !== null) {
+                            $seenCarrierMarketIds[] = $carrier->market_id;
+                        }
+
                         continue;
                     }
 
-                    $station = $system->stations()->updateOrCreate(
+                    $system->stations()->updateOrCreate(
                         [
                             'name' => $station->name,
                             'type' => $station->type,
@@ -347,11 +354,95 @@ class EdsmApiService extends ApiService
                     DiscordAlert::edsm(self::class, $message, false);
                 }
             }
+
+            // Carriers previously recorded at this system but absent from the
+            // current EDSM response have relocated (or been decommissioned) —
+            // drop them here so the system's carrier list stays accurate. If
+            // they reappear elsewhere, the next /systems/{slug} hit for that
+            // system will re-seat them via the market_id-keyed upsert.
+            FleetCarrier::where('system_id', $system->id)
+                ->whereNotIn('market_id', $seenCarrierMarketIds)
+                ->delete();
         } else {
             $message = 'Error updating system stations: No response from EDSM API for '.$system->name;
             Log::channel('import:system')->error($message);
             DiscordAlert::edsm(self::class, $message, false);
         }
+    }
+
+    /**
+     * Upsert a fleet carrier keyed on its global market_id. If the carrier
+     * has since moved to this system from another, its system_id gets
+     * overwritten here.
+     *
+     * @param  System  $system  - the system the carrier is currently docked in
+     * @param  object  $station  - the raw EDSM station payload
+     */
+    private function upsertFleetCarrier(System $system, object $station): ?FleetCarrier
+    {
+        if (! property_isset($station, 'marketId')) {
+            return null;
+        }
+
+        return FleetCarrier::updateOrCreate(
+            ['market_id' => $station->marketId],
+            [
+                'system_id' => $system->id,
+                'name' => $station->name,
+
+                'distance_to_arrival' => property_isset($station, 'distanceToArrival')
+                    ? $station->distanceToArrival
+                    : null,
+
+                'allegiance' => property_isset($station, 'allegiance')
+                    ? $station->allegiance
+                    : null,
+
+                'government' => property_isset($station, 'government')
+                    ? $station->government
+                    : null,
+
+                'economy' => property_isset($station, 'economy')
+                    ? $station->economy
+                    : null,
+
+                'second_economy' => property_isset($station, 'secondEconomy')
+                    ? $station->secondEconomy
+                    : null,
+
+                'has_market' => property_isset($station, 'haveMarket')
+                    ? $station->haveMarket
+                    : null,
+
+                'has_shipyard' => property_isset($station, 'haveShipyard')
+                    ? $station->haveShipyard
+                    : null,
+
+                'has_outfitting' => property_isset($station, 'haveOutfitting')
+                    ? $station->haveOutfitting
+                    : null,
+
+                'other_services' => is_array($station->otherServices)
+                    ? implode(',', $station->otherServices)
+                    : null,
+
+                'information_last_updated' => property_isset($station, 'updateTime')
+                    ? $this->date($station->updateTime->information)
+                    : null,
+
+                'market_last_updated' => property_isset($station, 'updateTime')
+                    ? $this->date($station->updateTime->market)
+                    : null,
+
+                'shipyard_last_updated' => property_isset($station, 'updateTime')
+                    ? $this->date($station->updateTime->shipyard)
+                    : null,
+
+                'outfitting_last_updated' => property_isset($station, 'updateTime')
+                    ? $this->date($station->updateTime->outfitting)
+                    : null,
+            ]
+        );
     }
 
     private function date($date, $format = 'Y-m-d H:i:s', $minYear = 2013, $maxYear = 2026)

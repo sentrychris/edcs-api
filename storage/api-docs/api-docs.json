@@ -1278,6 +1278,19 @@
                         }
                     },
                     {
+                        "name": "withFleetCarriers",
+                        "in": "query",
+                        "description": "Embed fleet carriers currently docked in the system",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    },
+                    {
                         "name": "limit",
                         "in": "query",
                         "description": "Results per page",
@@ -1375,6 +1388,19 @@
                         "name": "withStations",
                         "in": "query",
                         "description": "Embed stations and outposts",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                0,
+                                1
+                            ]
+                        }
+                    },
+                    {
+                        "name": "withFleetCarriers",
+                        "in": "query",
+                        "description": "Embed fleet carriers currently docked in the system",
                         "required": false,
                         "schema": {
                             "type": "integer",

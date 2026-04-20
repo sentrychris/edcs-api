@@ -26,16 +26,14 @@ class SystemController extends Controller
         // for the system model e.g. withBodies will load bodies for the system
         $this->setQueryRelations([
             'withInformation' => 'information',
-            'withBodies'      => 'bodies',
-            'withStations'    => 'stations',
+            'withBodies' => 'bodies',
+            'withStations' => 'stations',
+            'withFleetCarriers' => 'fleetCarriers',
         ]);
     }
 
     /**
      * List systems.
-     * 
-     * @param SearchSystemRequest $request
-     * @return AnonymousResourceCollection
      */
     #[OA\Get(
         path: '/systems',
@@ -48,6 +46,7 @@ class SystemController extends Controller
             new OA\Parameter(name: 'withInformation', in: 'query', required: false, description: 'Embed political/demographic information', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(name: 'withBodies', in: 'query', required: false, description: 'Embed celestial bodies', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(name: 'withStations', in: 'query', required: false, description: 'Embed stations and outposts', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
+            new OA\Parameter(name: 'withFleetCarriers', in: 'query', required: false, description: 'Embed fleet carriers currently docked in the system', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(name: 'limit', in: 'query', required: false, description: 'Results per page', schema: new OA\Schema(type: 'integer', example: 15)),
             new OA\Parameter(name: 'page', in: 'query', required: false, description: 'Page number', schema: new OA\Schema(type: 'integer', example: 1)),
         ],
@@ -97,9 +96,6 @@ class SystemController extends Controller
     /**
      * Show system.
      *
-     * @param string $slug
-     * @param SearchSystemRequest $request
-     * @param EdsmApiService $service
      * @return SystemResource
      */
     #[OA\Get(
@@ -112,6 +108,7 @@ class SystemController extends Controller
             new OA\Parameter(name: 'withInformation', in: 'query', required: false, description: 'Embed political/demographic information', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(name: 'withBodies', in: 'query', required: false, description: 'Embed celestial bodies', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
             new OA\Parameter(name: 'withStations', in: 'query', required: false, description: 'Embed stations and outposts', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
+            new OA\Parameter(name: 'withFleetCarriers', in: 'query', required: false, description: 'Embed fleet carriers currently docked in the system', schema: new OA\Schema(type: 'integer', enum: [0, 1])),
         ],
         responses: [
             new OA\Response(
@@ -165,6 +162,11 @@ class SystemController extends Controller
             return response([], 404);
         }
 
+        // The EDSM stations endpoint returns both regular stations and fleet
+        // carriers, so we refresh them together at most once per request even
+        // if the client asked for both relations.
+        $stationsRefreshed = false;
+
         // Update the system with the requested relations e.g. withBodies, withInformation, etc.
         foreach ($this->getQueryRelations() as $query => $relation) {
             if (array_key_exists($query, $validated) && (int) $validated[$query] === 1) {
@@ -178,9 +180,11 @@ class SystemController extends Controller
                     $service->updateSystemInformation($system);
                 }
 
-                // Check for existing system stations and update if necessary
-                if ($relation === 'stations' && ! $system->stations()->exists()) {
+                // Always refresh stations + fleet carriers from EDSM on cache
+                // miss — carriers are mobile so we can't trust stored state.
+                if (($relation === 'stations' || $relation === 'fleetCarriers') && ! $stationsRefreshed) {
                     $service->updateSystemStations($system);
+                    $stationsRefreshed = true;
                 }
 
                 // Load the relation

@@ -75,6 +75,20 @@ class System extends Model
     }
 
     /**
+     * Get fleet carriers currently docked in the system.
+     *
+     * Fleet carriers are mobile — this relation reflects the carriers EDSM
+     * last reported as present in this system. A carrier's `system_id` is
+     * overwritten when it shows up elsewhere.
+     *
+     * @return HasMany - the fleet carriers currently in the system
+     */
+    public function fleetCarriers(): HasMany
+    {
+        return $this->hasMany(FleetCarrier::class);
+    }
+
+    /**
      * Add a query filter scope to filter systems by name.
      *
      * This scope also allows for exact search or `like` search based on the passed options.
