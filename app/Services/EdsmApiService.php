@@ -103,12 +103,18 @@ class EdsmApiService extends ApiService
 
                 foreach ($bodies as $body) {
                     try {
-                        $id = random_int(100000000, 999999999);
-                        $bodyId = $id;
+                        $id = property_isset($body, 'id64')
+                            ? $body->id64
+                            : random_int(100000000, 999999999);
 
-                        if (property_isset($body, 'id64')) {
-                            $id = $body->id64;
+                        $isMainStar = property_isset($body, 'isMainStar') ? $body->isMainStar : false;
+
+                        if (property_isset($body, 'bodyId')) {
                             $bodyId = $body->bodyId;
+                        } elseif ($isMainStar) {
+                            $bodyId = 0;
+                        } else {
+                            $bodyId = random_int(100000000, 999999999);
                         }
 
                         $records[] = [
