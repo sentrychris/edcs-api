@@ -31,7 +31,7 @@ class ImportSystemsBodiesDumpFileJob implements ShouldQueue
      */
     public $tries = 10;
 
-    public int $batchSize = 5000;
+    public int $batchSize = 1500;
 
     protected string $file;
 
@@ -70,7 +70,7 @@ class ImportSystemsBodiesDumpFileJob implements ShouldQueue
             $count++;
 
             $system = System::whereId64($body->systemId64)->first();
-            if (!$system) {
+            if (! $system) {
                 continue;
             }
 
