@@ -158,7 +158,7 @@ class SanctumAuthController extends Controller
     {
         if ($request->user()) {
             return response()->json(
-                new UserResource($request->user()->load('commander'))
+                new UserResource($request->user()->load('commander.lastSystem'))
             );
         }
 

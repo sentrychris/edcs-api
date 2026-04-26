@@ -33,4 +33,14 @@ class Commander extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Get the commander's last known system (most recent CAPI report).
+     *
+     * @return BelongsTo - the last system the commander was seen in
+     */
+    public function lastSystem(): BelongsTo
+    {
+        return $this->belongsTo(System::class, 'last_system_id64', 'id64');
+    }
 }

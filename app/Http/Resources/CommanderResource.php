@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\System;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -29,6 +30,14 @@ class CommanderResource extends JsonResource
     public function toArray(Request $request): array
     {
         $resource = ['name' => $this->cmdr_name];
+
+        $lastSystem = $this->whenLoaded('lastSystem');
+        if ($lastSystem instanceof System) {
+            $resource['last_system'] = [
+                'name' => $lastSystem->name,
+                'slug' => $lastSystem->slug,
+            ];
+        }
 
         if ($this->includeAuth) {
             $resource['api'] = [
