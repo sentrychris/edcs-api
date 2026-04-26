@@ -1,5 +1,7 @@
 # ED:CS API
 
+[![Tests](https://github.com/sentrychris/edcs-api/actions/workflows/tests.yml/badge.svg)](https://github.com/sentrychris/edcs-api/actions/workflows/tests.yml)
+
 [OpenAPI Documentation](https://api.edcs.app/api/documentation)
 
 ED:CS is a backend API for the game *Elite: Dangerous*, providing a unified read interface over a large catalogue of star systems, celestial bodies, stations, market data, and Galnet news. Data is sourced from community projects.
@@ -67,16 +69,19 @@ The intended consumer is the [ED:CS web app](https://edcs.app), but the API is o
 
 3. Configure environment variables:
 
-    ```sh
+    ```
     ...
     DB_CONNECTION=mysql
-    DB_HOST=edcs-mysql-1 # name of the running db container
+    DB_HOST=edcs-mysql-1 # docker container name or ip address
     DB_PORT=3306
     DB_DATABASE=edcs
     DB_USERNAME=sail
     DB_PASSWORD=password
 
-    FRONTEND_URL=http://localhost:4201 # used to redirect oauth
+    FRONTEND_URL=http://localhost:4201 # oauth callback redirect
+
+    # Frontier OAuth2 client can be created at
+    # https://user.frontierstore.net/developer:
 
     FRONTIER_AUTH_URL=https://auth.frontierstore.net
     FRONTIER_CLIENT_ID=<your-frontier-oauth-client-id>
