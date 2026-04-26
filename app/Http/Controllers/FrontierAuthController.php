@@ -156,7 +156,7 @@ class FrontierAuthController extends Controller
     {
         return response()->json([
             'data' => [
-                'user' => new UserResource($request->user()->load('commander')),
+                'user' => new UserResource($request->user()->load('commander.lastSystem')),
                 'token' => $request->cookie('cmdr_token'),
             ],
         ]);
