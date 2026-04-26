@@ -132,9 +132,8 @@ class SanctumAuthController extends Controller
     {
         $request->user()->tokens()->delete();
 
-        return response()->json([
-            'message' => 'Logged out',
-        ]);
+        return response()->json(['message' => 'Logged out'])
+            ->withCookie(cookie()->forget('cmdr_token'));
     }
 
     /**
