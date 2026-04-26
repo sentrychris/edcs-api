@@ -94,7 +94,7 @@ class FrontierCApiService
     /**
      * Get the user's journal logs from CAPI.
      */
-    public function getJournal(User $user, mixed $year = '', mixed $month = '', mixed $day = ''): array
+    public function getJournal(User $user, mixed $year = '', mixed $month = '', mixed $day = ''): mixed
     {
         try {
             $uri = '/journal'
@@ -130,7 +130,7 @@ class FrontierCApiService
     /**
      * Get the user's active community goals.
      */
-    public function getCommunityGoals(User $user): array
+    public function getCommunityGoals(User $user): mixed
     {
         try {
             $response = $this->client->request('GET', '/communitygoals', [

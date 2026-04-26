@@ -111,8 +111,8 @@ class FrontierAuthController extends Controller
         // Confirm the CMDR, creates a new CMDR record in our db if they do not exist
         $this->frontierCApiService->confirmCommander($user);
 
-        // Create a sanctum access token, we're using BFF proxy to handle the auth
-        // between the front-end, the back-end, and Frontier.
+        // Revoke any existing Sanctum tokens then issue a fresh one.
+        $user->tokens()->delete();
         $token = $user->createToken('frontier')->plainTextToken;
 
         Log::info($token);
