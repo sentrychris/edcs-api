@@ -12,7 +12,23 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        //
+        // // Large dumps rebuilt nightly — withoutOverlapping prevents stacking if a run overruns
+        // foreach (['systems', 'populated-systems', 'bodies', 'stations', 'carriers'] as $type) {
+        //     $schedule->command("dumps:build --type={$type}")
+        //         ->daily()
+        //         ->withoutOverlapping()
+        //         ->onOneServer()
+        //         ->runInBackground();
+        // }
+
+        // // Recent (7-day window) dumps refreshed every six hours
+        // foreach (['systems-recent', 'bodies-recent', 'stations-recent', 'carriers-recent'] as $type) {
+        //     $schedule->command("dumps:build --type={$type}")
+        //         ->everySixHours()
+        //         ->withoutOverlapping()
+        //         ->onOneServer()
+        //         ->runInBackground();
+        // }
     }
 
     /**

@@ -22,4 +22,5 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Bodies', description: 'Celestial bodies — stars, planets, moons')]
 #[OA\Tag(name: 'Stations', description: 'Stations, outposts, and megaships')]
 #[OA\Tag(name: 'Market', description: 'Live commodity market data from EDDN')]
+#[OA\Tag(name: 'Data Downloads', description: 'Bulk compressed dataset exports — systems, bodies, stations, and fleet carriers')]
 class ApiInfo {}

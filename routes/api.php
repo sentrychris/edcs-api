@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CommanderController;
+use App\Http\Controllers\DataDownloadController;
 use App\Http\Controllers\FrontierAuthController;
 use App\Http\Controllers\FrontierCApiController;
 use App\Http\Controllers\GalaxyController;
@@ -131,4 +132,14 @@ Route::get('statistics', StatisticsController::class);
 */
 Route::prefix('galnet')->group(function () {
     Route::resource('news', GalnetNewsController::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| /downloads routes
+|--------------------------------------------------------------------------
+*/
+Route::prefix('downloads')->name('downloads.')->group(function () {
+    Route::get('manifest', [DataDownloadController::class, 'manifest'])->name('manifest');
+    Route::get('{type}', [DataDownloadController::class, 'download'])->name('download');
 });
