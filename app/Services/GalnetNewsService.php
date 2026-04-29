@@ -32,7 +32,7 @@ class GalnetNewsService extends ApiService
                     'content' => $article->body->processed,
                     'uploaded_at' => $article->field_galnet_date,
                     'order_added' => ++$lastArticleOrder,
-                    'banner_image' => $i % 2 === 0 ? '/images/sunrise.jpg' : '/images/helios.jpg',
+                    'banner_image' => ['/images/galnet/sunrise.jpg', '/images/galnet/helios.jpg', '/images/galnet/nebula.jpg'][$i % 3],
                 ]);
 
                 $article->audio_file = "/audio/galnet-article-id-{$article->id}.mp3";
