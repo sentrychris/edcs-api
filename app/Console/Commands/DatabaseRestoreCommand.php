@@ -15,6 +15,7 @@ class DatabaseRestoreCommand extends Command
         {--keep-binlog : Write loaded rows to the binlog (slower, replication-safe).}
         {--disable-redo-log : Disable the InnoDB redo log for the duration of the restore.}
         {--reset-progress : Discard any prior load progress and start over.}
+        {--target= : Target schema name. If set, all dumped objects are loaded into this schema instead of the original.}
         {--connection= : Database connection name. Defaults to the application default.}';
 
     protected $description = 'Restore a MySQL Shell dump in parallel via util.loadDump.';
@@ -43,12 +44,14 @@ class DatabaseRestoreCommand extends Command
         $skipBinlog = ! $this->option('keep-binlog');
         $disableRedoLog = (bool) $this->option('disable-redo-log');
         $resetProgress = (bool) $this->option('reset-progress');
+        $target = $this->option('target') ?: null;
         $username = $config['backup_username'] ?: $config['username'];
         $password = $config['backup_password'] ?: $config['password'];
 
         $this->line("Restoring dump from {$path}");
         $this->line('Threads: '.$threads
             .', user: '.$username
+            .($target ? ", target schema: {$target}" : '')
             .', defer indexes: '.($deferIndexes ? 'yes' : 'no')
             .', skip binlog: '.($skipBinlog ? 'yes' : 'no')
             .', disable redo log: '.($disableRedoLog ? 'yes' : 'no'));
@@ -89,6 +92,10 @@ class DatabaseRestoreCommand extends Command
                 '--skip-binlog='.($skipBinlog ? 'true' : 'false'),
                 '--reset-progress='.($resetProgress ? 'true' : 'false'),
             ];
+
+            if ($target !== null) {
+                $command[] = '--schema='.$target;
+            }
 
             $result = Process::forever()->run(
                 $command,

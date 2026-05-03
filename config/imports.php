@@ -18,6 +18,7 @@ return [
                 'NGC 2168 SB 254',         // integrity constraint, duplicate, id64 20465922154929
                 'GMB2010 WOCS 24056',      // integrity constraint, duplicate, id64 7272587993345
                 '2MASS J05362745+0945256', // integrity constraint, duplicate, id64 84238937432937
+                '2MASS J05352547-0521349',
                 'NGC 2168 SB 791',         // integrity constraint, duplicate, id64 57849854435657
                 'NGC 2168 BSB 5280',        // integrity constraint, duplicate, id64 5073296302449
             ],

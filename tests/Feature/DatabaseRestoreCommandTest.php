@@ -77,6 +77,43 @@ class DatabaseRestoreCommandTest extends TestCase
         });
     }
 
+    public function test_target_option_redirects_load_to_a_different_schema(): void
+    {
+        Process::fake([
+            '*mysqlsh*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $name = 'restore-target-'.uniqid();
+        $this->makeDump($name);
+
+        $this->artisan('db:restore', ['name' => $name, '--target' => 'edcs_clone'])
+            ->assertSuccessful();
+
+        Process::assertRan(function ($process) {
+            $cmd = is_array($process->command) ? implode(' ', $process->command) : $process->command;
+
+            return str_contains($cmd, '--schema=edcs_clone');
+        });
+    }
+
+    public function test_target_option_is_omitted_when_not_set(): void
+    {
+        Process::fake([
+            '*mysqlsh*' => Process::result(output: 'ok', exitCode: 0),
+        ]);
+
+        $name = 'restore-notarget-'.uniqid();
+        $this->makeDump($name);
+
+        $this->artisan('db:restore', ['name' => $name])->assertSuccessful();
+
+        Process::assertRan(function ($process) {
+            $cmd = is_array($process->command) ? implode(' ', $process->command) : $process->command;
+
+            return ! str_contains($cmd, '--schema=');
+        });
+    }
+
     public function test_no_defer_indexes_flag_disables_deferral(): void
     {
         Process::fake([
