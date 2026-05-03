@@ -58,6 +58,8 @@ class EddnSystemService extends EddnService
         $id64s = array_column($validMessages, 'SystemAddress');
         $existingSystems = System::whereIn('id64', $id64s)->get()->keyBy('id64');
 
+        $latestSystem = null;
+
         foreach ($validMessages as $message) {
             $starSystem = $message['StarSystem'];
             $starSystemId64 = $message['SystemAddress'];
@@ -86,7 +88,11 @@ class EddnSystemService extends EddnService
                 continue;
             }
 
-            Cache::set('latest_system', $system);
+            $latestSystem = $system;
+        }
+
+        if ($latestSystem !== null) {
+            Cache::set('latest_system', $latestSystem);
         }
     }
 
